@@ -8,28 +8,46 @@ spring:
     gateway:
       discovery:
         locator:
-          enabled: true
-          lower-case-service-id: true
+          enabled: false  # disable auto discovery locator
       routes:
         - id: user-service
           uri: lb://USER-SERVICE
           predicates:
             - Path=/user/**
           filters:
+            - StripPrefix=1
             - name: CircuitBreaker
               args:
                 name: userServiceCircuitBreaker
                 fallbackUri: forward:/fallback/user
             - name: RequestRateLimiter
               args:
-                redis-rate-limiter.replenishRate: 10 # 10 requests per second
+                redis-rate-limiter.replenishRate: 10
                 redis-rate-limiter.burstCapacity: 20
+
+        - id: order-service
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/order/**
+          filters:
+            - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: orderServiceCircuitBreaker
+                fallbackUri: forward:/fallback/order
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+
     loadbalancer:
       ribbon:
         enabled: false
 
 eureka:
   client:
+    register-with-eureka: true
+    fetch-registry: true
     service-url:
       defaultZone: http://localhost:8761/eureka/
 
@@ -41,3 +59,12 @@ management:
   endpoint:
     gateway:
       enabled: true
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.gateway.route.RouteDefinitionLocator: DEBUG
+
+jwt:
+  secret: SecretKeyofMaduranjana
